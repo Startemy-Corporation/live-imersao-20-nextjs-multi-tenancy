@@ -1,0 +1,43 @@
+###
+
+@username = user1
+@password = password1
+
+###
+
+# @name auth
+POST http://localhost:8000/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{ username }}",
+  "password": "{{ password }}"
+}
+
+###
+
+@token = {{ auth.response.body.token }}
+
+###
+# @name listProjects
+GET http://localhost:8000/projects
+Authorization: Bearer {{ token }}
+
+###
+
+@projectId = {{ listProjects.response.body.0.id }}
+
+###
+# @name listTasks
+GET http://localhost:8000/projects/{{ projectId }}/tasks
+Authorization: Bearer {{ token }}
+
+###
+# @name createTask
+POST http://localhost:8000/projects/{{ projectId }}/tasks
+Authorization: Bearer {{ token }}
+Content-Type: application/json
+
+{
+  "title": "Task 1"
+}
