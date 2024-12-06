@@ -19,6 +19,7 @@ const tenants = [
 const users = [
   { id: 1, username: "user1", password: "password1", tenantId: "company1" },
   { id: 2, username: "user2", password: "password2", tenantId: "company2" },
+  { id: 2, username: "user3", password: "password3", tenantId: "company1" },
 ];
 
 const projects = {

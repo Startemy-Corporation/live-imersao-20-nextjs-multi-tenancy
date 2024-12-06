@@ -1,26 +1,19 @@
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { getSession, getUser } from "../../../../utils/session";
 //itau
 //microsoft
 //totvs
 
 // jira.com - login
-
-
-export async function getTasks(projectId: any) {
-  console.log(projectId);
-  const session = await getSession();
-  const user = await getUser();
+export async function getTasks(projectId: any, token: string, tenantId: any) {
   const response = await fetch(
     `http://localhost:8000/projects/${projectId}/tasks`,
     {
       headers: {
-        Authorization: `Bearer ${session.token}`,
-        "X-Tenant-Id": user!.tenantId,
-      },
-      cache: "force-cache",
-      next: {
-        tags: [`project-${projectId}-tasks`],
+        Authorization: `Bearer ${token}`,
+        //não precisa ser enviado se o usuário está relacionado com apenas um tenant
+        //fizemos o cache usando o unstable_cache
+        "X-Tenant-Id": tenantId,
       },
       // next: {
       //   revalidate: 10 // segundos
@@ -32,6 +25,7 @@ export async function getTasks(projectId: any) {
 
   return response.json();
 }
+
 // 100000 - 1 chamada pra API
 //14 to 15
 //14 - cacheable por default
@@ -42,6 +36,7 @@ export async function addTaskAction(formData: FormData) {
 
   const { projectId, title, description } = Object.fromEntries(formData);
   const session = await getSession();
+  const user = await getUser();
   await fetch(`http://localhost:8000/projects/${projectId}/tasks`, {
     method: "POST",
     headers: {
@@ -51,7 +46,7 @@ export async function addTaskAction(formData: FormData) {
     body: JSON.stringify({ title, description }),
   });
   //revalidatePath(`/projects/${projectId}/tasks`);
-  revalidateTag(`project-${projectId}-tasks`);
+  revalidateTag(`project-${projectId}-tasks-${user!.tenantId}`);
 }
 
 export async function TasksPage({
@@ -60,7 +55,15 @@ export async function TasksPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const tasks = await getTasks(projectId);
+  const session = await getSession();
+  const user = await getUser();
+
+  const getCachedTasks = unstable_cache(
+    async () => getTasks(projectId, session.token, user!.tenantId),
+    [`projects-${projectId}-tasks-${user!.tenantId}`],
+    { tags: [`projects-${projectId}-tasks-${user!.tenantId}`] }
+  );
+  const tasks = await getCachedTasks();
   return (
     <div className="m-4">
       <h1 className="text-2xl font-bold mb-4">Tasks</h1>

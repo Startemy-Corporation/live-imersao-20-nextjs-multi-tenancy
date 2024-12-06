@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import { getSession, getUser } from "../utils/session";
 import Link from "next/link";
 
@@ -10,40 +10,45 @@ import Link from "next/link";
 
 // }
 
-export async function getProjects() {
-  const session = await getSession();
-  const user = await getUser();
+export async function getProjects(token: string, tenantId: any) {
   const response = await fetch("http://localhost:8000/projects", {
     headers: {
-      Authorization: `Bearer ${session.token}`,
-      "X-Tenant-Id": user!.tenantId,
-    }
+      Authorization: `Bearer ${token}`,
+      //não precisa ser enviado se o usuário está relacionado com apenas um tenant
+      //fizemos o cache usando o unstable_cache
+      "X-Tenant-Id": tenantId,
+    },
   });
 
   return response.json();
 }
 
 export async function addProjectAction(formData: FormData) {
-  'use server';
+  "use server";
 
-  const name = formData.get('name');
+  const name = formData.get("name");
   const session = await getSession();
-  await fetch('http://localhost:8000/projects', {
-    method: 'POST',
+  await fetch("http://localhost:8000/projects", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${session.token}`,
       //'X-Tenant-Id': await getTenant()
     },
     body: JSON.stringify({ name }),
-  })
-  revalidatePath('/');
+  });
+  revalidatePath("/");
 }
 
 export async function DashboardPage() {
-
-  const projects = await getProjects();
-
+  const session = await getSession();
+  const user = await getUser();
+  const getCachedProjects = unstable_cache(
+    async () => getProjects(session.token, user!.tenantId),
+    [`projects-${user!.tenantId}`],
+    { tags: [`projects-${user!.tenantId}`] }
+  );
+  const projects = await getCachedProjects();
   return (
     <div className="m-4">
       <h1 className="text-2xl font-bold mb-4">Projects</h1>
