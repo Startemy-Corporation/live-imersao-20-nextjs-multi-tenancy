@@ -23,3 +23,4 @@ O uso de um header personalizado que será diferente para cada usuário, faz com
 Para realizar um cache onde temos headers personalizados, podemos usar o `unstable_cache`, como acrescentei no código. Na versão 15, temos o `use cache`, mas ele ainda não está estável para uso. 
 
 
+Assim, teremos um cache compartilhado por tenant e não por usuário.
